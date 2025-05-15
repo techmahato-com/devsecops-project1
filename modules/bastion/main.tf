@@ -1,5 +1,6 @@
+# modules/bastion/main.tf
 resource "aws_security_group" "bastion_sg" {
-  name        = "${var.instance_name}-sg"
+  name        = "${var.bastion_instance_name}-sg"
   description = "Allow SSH access to Bastion Host"
   vpc_id      = var.vpc_id
 
@@ -12,7 +13,6 @@ resource "aws_security_group" "bastion_sg" {
   }
 
   egress {
-    description = "Allow all outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -20,7 +20,7 @@ resource "aws_security_group" "bastion_sg" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.instance_name}-sg"
+    Name = "${var.bastion_instance_name}-sg"
   })
 }
 
@@ -33,7 +33,6 @@ resource "aws_instance" "bastion" {
   associate_public_ip_address = true
 
   tags = merge(var.tags, {
-    Name = var.instance_name
+    Name = var.bastion_instance_name
   })
 }
-

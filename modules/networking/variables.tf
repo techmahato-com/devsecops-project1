@@ -4,7 +4,7 @@ variable "vpc_name" {
 }
 
 variable "project_name" {
-  description = "Name of the project (used for resource naming)"
+  description = "Project name"
   type        = string
 }
 
@@ -24,12 +24,12 @@ variable "private_subnets" {
 }
 
 variable "availability_zones" {
-  description = "List of availability zones"
+  description = "Availability zones"
   type        = list(string)
 }
 
 variable "availability_zones_short" {
-  description = "Short codes for availability zones (a, b, c)"
+  description = "Short AZ codes"
   type        = list(string)
 }
 
@@ -39,9 +39,7 @@ variable "region" {
 }
 
 variable "tags" {
-  description = "Additional tags for all resources"
+  description = "Resource tags"
   type        = map(string)
   default     = {}
 }
-
-

@@ -1,4 +1,16 @@
-# === VPC Variables ===
+# Global variables
+variable "region" {
+  description = "AWS region"
+  type        = string
+}
+
+variable "tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
+}
+
+# Networking variables
 variable "vpc_name" {
   description = "Name of the VPC"
   type        = string
@@ -34,41 +46,20 @@ variable "availability_zones_short" {
   type        = list(string)
 }
 
-variable "region" {
-  description = "AWS region"
-  type        = string
-}
-
-variable "tags" {
-  description = "Resource tags"
-  type        = map(string)
-  default     = {}
-}
-
-# === Bastion Host Variables (Decoupled) ===
+# Bastion variables
 variable "bastion_ami_id" {
   description = "AMI ID for Bastion host"
   type        = string
 }
 
 variable "bastion_instance_type" {
-  description = "Instance type"
+  description = "Instance type for Bastion"
   type        = string
   default     = "t3.micro"
 }
 
-variable "bastion_subnet_id" {
-  description = "Subnet ID to launch Bastion"
-  type        = string
-}
-
-variable "bastion_vpc_id" {
-  description = "VPC ID for Bastion SG"
-  type        = string
-}
-
 variable "trusted_ssh_cidr" {
-  description = "CIDR for SSH access"
+  description = "CIDR for SSH access to Bastion"
   type        = string
 }
 
@@ -81,4 +72,3 @@ variable "bastion_instance_name" {
   description = "Name tag for Bastion instance"
   type        = string
 }
-

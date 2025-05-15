@@ -1,0 +1,12 @@
+# Terraform local files
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.crash
+*.log
+*.bak
+*.tmp
+# Optional: ignore lock file
+.terraform.lock.hcl
+
