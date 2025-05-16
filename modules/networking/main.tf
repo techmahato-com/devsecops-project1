@@ -1,100 +1,131 @@
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-  tags = merge(var.tags, {
-    Name = var.vpc_name
-  })
+# ======================
+# Global Configuration
+# ======================
+
+variable "region" {
+  description = "AWS region where resources will be deployed"
+  type        = string
+  default     = "ap-south-1" # Default to Mumbai region
+  # Note: Consider making this required in production environments
 }
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-igw"
-  })
+variable "tags" {
+  description = "Common tags to be applied to all resources for better organization and cost tracking"
+  type        = map(string)
+  default     = {
+    Terraform   = "true"  # Identifies resources managed by Terraform
+    Environment = "dev"    # Environment classification (dev/stage/prod)
+  }
+  # Additional tags like 'Owner', 'CostCenter' can be added here
 }
 
-resource "aws_eip" "nat" {
-  domain = "vpc"
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-nat-eip"
-  })
+# ======================
+# Networking Configuration
+# ======================
+
+variable "vpc_name" {
+  description = "Name tag for the VPC (used for identification in AWS console)"
+  type        = string
+  # This should be provided by the calling module/workspace
 }
 
-resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-nat-gw"
-  })
-  depends_on = [aws_internet_gateway.main]
+variable "project_name" {
+  description = "Project name used as prefix for resource naming (e.g., 'ecommerce', 'analytics')"
+  type        = string
+  # Important for resource naming consistency across AWS
 }
 
-resource "aws_subnet" "public" {
-  count                   = length(var.public_subnets)
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnets[count.index]
-  availability_zone       = var.availability_zones[count.index]
-  map_public_ip_on_launch = true
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-public-${var.availability_zones_short[count.index]}"
-  })
+variable "vpc_cidr" {
+  description = "Primary CIDR block for the VPC in CIDR notation (e.g., 10.0.0.0/16)"
+  type        = string
+  default     = "10.0.0.0/16" # Default /16 provides 65,536 IP addresses
+  # Note: Ensure this doesn't overlap with other networks in your organization
 }
 
-resource "aws_subnet" "private" {
-  count             = length(var.private_subnets)
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnets[count.index]
-  availability_zone = var.availability_zones[count.index]
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-private-${var.availability_zones_short[count.index]}"
-  })
+variable "availability_zones" {
+  description = "List of exactly 3 Availability Zones for high availability deployment"
+  type        = list(string)
+  default     = ["ap-south-1a", "ap-south-1b", "ap-south-1c"] # Mumbai region AZs
+  validation {
+    condition     = length(var.availability_zones) == 3
+    error_message = "Exactly 3 availability zones must be specified for proper high availability."
+  }
+  # Using 3 AZs ensures resilience against AZ failures
 }
 
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-public-rt"
-  })
+variable "availability_zones_short" {
+  description = "Short codes for AZs used in resource naming (e.g., 'aza', 'azb', 'azc')"
+  type        = list(string)
+  default     = ["aza", "azb", "azc"]
+  # These short codes are used in resource names to indicate AZ placement
 }
 
-resource "aws_route" "public_internet_gateway" {
-  route_table_id         = aws_route_table.public.id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.main.id
+# ======================
+# Subnet Configuration
+# ======================
+
+variable "public_subnets" {
+  description = "CIDR blocks for public subnets (one per AZ) that will have direct internet access via IGW"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"] # /24 provides 256 IPs per subnet
+  # Public subnets typically host load balancers, bastion hosts, and NAT gateways
 }
 
-resource "aws_route_table_association" "public" {
-  count          = length(var.public_subnets)
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
+variable "private_subnets" {
+  description = "CIDR blocks for private application subnets (one per AZ) with outbound internet via NAT"
+  type        = list(string)
+  default     = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+  # Private subnets host application servers, containers, and other backend services
 }
 
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-private-rt"
-  })
+variable "database_subnets" {
+  description = "CIDR blocks for isolated database subnets (one per AZ) with no internet access"
+  type        = list(string)
+  default     = ["10.0.7.0/24", "10.0.8.0/24", "10.0.9.0/24"]
+  # Database subnets have the most restrictive security groups
 }
 
-resource "aws_route" "private_nat_gateway" {
-  route_table_id         = aws_route_table.private.id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.main.id
+variable "create_database_subnet_group" {
+  description = "Whether to create a database subnet group for RDS/Aurora (required for most database services)"
+  type        = bool
+  default     = true
+  # Set to false if you're managing database subnet groups separately
 }
 
-resource "aws_route_table_association" "private" {
-  count          = length(var.private_subnets)
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+# ======================
+# Bastion Host Configuration
+# ======================
+
+variable "bastion_ami_id" {
+  description = "AMI ID for the bastion host (Amazon Linux 2 recommended for security updates)"
+  type        = string
+  # Example: "ami-0cca134ec43cf708f" (Amazon Linux 2 in ap-south-1)
+  # Note: Consider using a hardened bastion AMI for production
 }
 
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.${var.region}.s3"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids   = concat([aws_route_table.public.id], [aws_route_table.private.id])
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-s3-endpoint"
-  })
+variable "bastion_instance_type" {
+  description = "Instance type for the bastion host (t3.micro is sufficient for most use cases)"
+  type        = string
+  default     = "t3.micro" # Burstable instance type with good cost-performance
+  # For high-traffic bastions, consider t3.small or larger
+}
+
+variable "trusted_ssh_cidr" {
+  description = "CIDR block(s) allowed to SSH to the bastion (e.g., your office IP or VPN range)"
+  type        = string
+  # Example: "203.0.113.42/32" for a specific IP
+  # Security best practice: Restrict this as narrowly as possible
+}
+
+variable "key_name" {
+  description = "Name of existing EC2 key pair for SSH access to the bastion host"
+  type        = string
+  # Key pairs should be managed securely and rotated periodically
+}
+
+variable "bastion_instance_name" {
+  description = "Name tag for the bastion host instance (visible in AWS console)"
+  type        = string
+  default     = "bastion-host"
+  # Consider including environment in the name (e.g., "prod-bastion")
 }

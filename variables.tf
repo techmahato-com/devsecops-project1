@@ -17,34 +17,66 @@ variable "vpc_name" {
 }
 
 variable "project_name" {
-  description = "Project name"
+  description = "Project name for resource naming"
   type        = string
 }
 
 variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
+  description = "Main VPC CIDR block"
   type        = string
-}
-
-variable "public_subnets" {
-  description = "List of public subnet CIDR blocks"
-  type        = list(string)
-}
-
-variable "private_subnets" {
-  description = "List of private subnet CIDR blocks"
-  type        = list(string)
+  default     = "10.0.0.0/16"
 }
 
 variable "availability_zones" {
-  description = "Availability zones"
+  description = "List of 3 Availability Zones"
   type        = list(string)
+  default     = ["ap-south-1a", "ap-south-1b", "ap-south-1c"]
 }
 
 variable "availability_zones_short" {
-  description = "Short AZ codes"
+  description = "Short AZ codes for naming"
   type        = list(string)
+  default     = ["aza", "azb", "azc"]
 }
+
+variable "public_subnets" {
+  description = "Public subnet CIDRs"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+}
+
+variable "private_subnets" {
+  description = "Private subnet CIDRs"
+  type        = list(string)
+  default     = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+}
+
+variable "database_subnets" {
+  description = "Database subnet CIDRs"
+  type        = list(string)
+  default     = ["10.0.7.0/24", "10.0.8.0/24", "10.0.9.0/24"]
+}
+
+variable "create_database_subnet_group" {
+  description = "Create database subnet group"
+  type        = bool
+  default     = true
+}
+
+variable "region" {
+  description = "AWS region"
+  type        = string
+  default     = "ap-south-1"
+}
+
+variable "tags" {
+  description = "Common tags"
+  type        = map(string)
+  default     = {}
+}
+
+
+
 
 # Bastion variables
 variable "bastion_ami_id" {
